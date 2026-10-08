@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bate Cachaça — Demo</title>
+<meta name="theme-color" content="#101010">
+<style>
+:root{color-scheme:dark;--bg:#101010;--card:#1b1b1b;--text:#f5f5f5;--muted:#a8a8a8;--accent:#f5b700;--danger:#e84b4b;--ok:#42c77a;--music:#b06bff}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text);-webkit-tap-highlight-color:transparent}
+.app{min-height:100vh;padding:22px 16px 28px;display:flex;justify-content:center}.wrap{width:100%;max-width:520px}
+header{text-align:center;margin:10px 0 20px} h1{font-size:30px;margin:0;font-weight:850;letter-spacing:-1px} .sub{color:var(--muted);margin-top:5px}
+.status{display:flex;gap:10px;margin-bottom:14px}.pill{flex:1;background:var(--card);border:1px solid #303030;border-radius:14px;padding:11px;text-align:center}.pill b{display:block;font-size:20px}.pill span{font-size:12px;color:var(--muted)}
+.card{background:var(--card);border:1px solid #303030;border-radius:22px;padding:22px;box-shadow:0 12px 30px #0006}
+.cat{color:var(--accent);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px}
+.q{font-size:25px;line-height:1.22;font-weight:750;margin:14px 0 22px;min-height:92px}
+.answer{border-top:1px solid #333;padding-top:16px;display:none}
+.answer .label{font-size:11px;color:var(--muted);text-transform:uppercase}
+.answer .value{font-size:22px;font-weight:800;margin-top:4px}
+button{width:100%;border:0;border-radius:15px;padding:15px 16px;font-size:16px;font-weight:800;cursor:pointer;margin-top:10px;font-family:inherit}
+.reveal{background:var(--accent);color:#111}
+.correct{background:var(--ok);color:#08120c}
+.wrong{background:var(--danger);color:white}
+.next{background:#303030;color:white}
+.message{text-align:center;min-height:28px;margin:16px 0 0;font-weight:800}
+.danger{color:#ff6565}.ok{color:#57dc8e}
+.note{color:var(--muted);font-size:12px;text-align:center;margin-top:18px;line-height:1.45}
+.hidden{display:none}
+.card.music-mode.revealed .cat{color:var(--music)}
+.card.piada-mode.revealed .cat{color:var(--music)}
+</style>
+</head>
+<body>
+<div class="app"><main class="wrap">
+
+<header>
+  <h1>🍻 BATE CACHAÇA</h1>
+  <div class="sub">Demonstração — 10 perguntas</div>
+</header>
+
+<div class="status">
+  <div class="pill"><b id="num">1</b><span>pergunta</span></div>
+  <div class="pill"><b id="errors">0</b><span>erros seguidos</span></div>
+</div>
+
+<section class="card" id="card">
+  <div class="cat" id="cat"></div>
+  <div class="q" id="question"></div>
+  <div class="answer" id="answer">
+    <div class="label" id="answerLabel">Gabarito</div>
+    <div class="value" id="answerText"></div>
+  </div>
+  <button class="reveal" id="reveal">🔒 Revelar resposta</button>
+  <div id="decision" class="hidden">
+    <button class="correct" id="correct">✅ Acertou</button>
+    <button class="wrong" id="wrong">❌ Errou</button>
+  </div>
+  <button class="next hidden" id="next">➡️ Próxima pergunta</button>
+</section>
+
+<div class="message" id="message"></div>
+<div class="note">O jogador só deve ver a pergunta. O gabarito aparece apenas depois da resposta ser dada.</div>
+</main></div>
+
+<script>
+// ============ BANCO DA DEMO (10 itens) ============
+const questions = [
+  // --- Perguntas normais ---
+  ["normal","Conhecimento geral", "Qual é a capital do Japão?", "Tóquio"],
+  ["normal","Games", "Qual é o nome do protagonista de God of War?", "Kratos"],
+  ["normal","Futebol", "Quantas Copas do Mundo a Seleção Brasileira masculina ganhou?", "5"],
+  ["normal","Pegadinha", "Qual mês tem 28 dias?", "Todos os meses"],
+  ["normal","Pegadinha", "Quanto é 8 ÷ 2(2+2)?", "16 (regra padrão)"],
+  ["normal","Cultura pop", "Qual é o nome da escola de magia do Harry Potter?", "Hogwarts"],
+
+  // --- Complete a música (sem aviso) ---
+  ["music","Complete a música", "e ela posta foto", "no insta em Fernando de Noronha"],
+  ["music","Complete a música", "Tá cheia de marra essa menina", "é só porque não me provou"],
+  ["music","Complete a música", "Eu vou parar de tomar gin", "acho que não"],
+
+  // --- Piada interna ---
+  ["piada","Piada interna", "De acordo com o filósofo Wagnão: quem vê cara...", "não come buceta"],
+];
+
+// ============ EMBARALHAR ============
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+let queue = shuffle(questions);
+let i = 0, errors = 0;
+const $ = id => document.getElementById(id);
+
+function render(){
+  if (i >= queue.length) {
+    queue = shuffle(questions);
+    i = 0;
+  }
+  const [type, cat, q, a] = queue[i];
+
+  $("num").textContent = `${i + 1}/10`;
+  $("cat").textContent = cat;
+  $("question").textContent = q;
+  $("answerText").textContent = a;
+
+  const labels = { music: "Continuação", piada: "Resposta" };
+  $("answerLabel").textContent = labels[type] || "Gabarito";
+
+  $("card").classList.remove("revealed");
+  $("card").classList.toggle("music-mode", type === "music");
+  $("card").classList.toggle("piada-mode", type === "piada");
+  $("answer").style.display = "none";
+  $("reveal").style.display = "block";
+  $("decision").classList.add("hidden");
+  $("next").classList.add("hidden");
+  $("message").textContent = "";
+  $("message").className = "message";
+}
+
+$("reveal").onclick = () => {
+  $("answer").style.display = "block";
+  $("reveal").style.display = "none";
+  $("decision").classList.remove("hidden");
+  $("card").classList.add("revealed");
+};
+
+$("correct").onclick = () => {
+  errors = 0;
+  $("errors").textContent = errors;
+  $("message").textContent = "ACERTOU! 🔥";
+  $("message").className = "message ok";
+  $("decision").classList.add("hidden");
+  $("next").classList.remove("hidden");
+};
+
+$("wrong").onclick = () => {
+  errors++;
+  $("errors").textContent = errors;
+  $("decision").classList.add("hidden");
+  $("next").classList.remove("hidden");
+  if (errors >= 2) {
+    $("message").textContent = "🥃 DOSE + SOCO";
+    $("message").className = "message danger";
+    errors = 0;
+  } else {
+    $("message").textContent = "❌ 1 erro. Cuidado...";
+    $("message").className = "message danger";
+  }
+};
+
+$("next").onclick = () => { i++; render(); };
+render();
+</script>
+</body></html>
